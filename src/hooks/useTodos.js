@@ -50,7 +50,7 @@ export const useTodos = (listId) => {
     loadTodos();
   }, [listId, useLocal]);
 
-  // Save todos when they change
+  // Save todos when they change (debounced)
   useEffect(() => {
     if (!listId || !hasLoadedRef.current) {
       return;
@@ -83,7 +83,12 @@ export const useTodos = (listId) => {
       }
     };
 
-    saveTodos();
+    // Debounce saves to avoid race conditions (500ms delay)
+    const timeoutId = setTimeout(() => {
+      saveTodos();
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
   }, [todos, listId, useLocal]);
 
   const addTodo = (text, parentId = null) => {
@@ -363,12 +368,37 @@ export const useTodos = (listId) => {
     }
   };
 
+  const toggleMultiple = (ids, targetState) => {
+    setTodos(prevTodos => {
+      const updateSelectedItems = (items) => {
+        return items.map(item => {
+          if (ids.includes(item.id)) {
+            return {
+              ...item,
+              completed: targetState,
+              children: item.children.length > 0 ? cascadeCompletion(item.children, targetState) : []
+            };
+          }
+          if (item.children.length > 0) {
+            return {
+              ...item,
+              children: updateSelectedItems(item.children)
+            };
+          }
+          return item;
+        });
+      };
+      return updateSelectedItems(prevTodos);
+    });
+  };
+
   return {
     todos,
     addTodo,
     addTodoAfter,
     updateTodo,
     toggleTodo,
+    toggleMultiple,
     deleteTodo,
     moveTodo,
     indentTodo,

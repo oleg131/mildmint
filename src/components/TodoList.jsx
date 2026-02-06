@@ -8,6 +8,9 @@ import { generateListId } from '../utils/listManager';
 
 function TodoList({ listId }) {
   const [showHelp, setShowHelp] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [isSelecting, setIsSelecting] = useState(false);
+  const [selectionStart, setSelectionStart] = useState(null);
   const fileInputRef = useRef(null);
   const inputRefs = useRef({});
   const navigate = useNavigate();
@@ -18,6 +21,7 @@ function TodoList({ listId }) {
     addTodoAfter,
     updateTodo,
     toggleTodo,
+    toggleMultiple,
     deleteTodo,
     moveTodo,
     indentTodo,
@@ -65,37 +69,122 @@ function TodoList({ listId }) {
     navigate(`/${newListId}`);
   };
 
+  const handleSelectionStart = useCallback((id) => {
+    setIsSelecting(true);
+    setSelectionStart(id);
+    setSelectedIds(new Set([id]));
+  }, []);
+
+  const handleSelectionMove = useCallback((id) => {
+    if (!isSelecting || !selectionStart) return;
+
+    // Get all todo IDs in order
+    const allIds = [];
+    const collectIds = (items) => {
+      items.forEach(item => {
+        allIds.push(item.id);
+        if (item.children && item.children.length > 0) {
+          collectIds(item.children);
+        }
+      });
+    };
+    collectIds(todos);
+
+    // Find start and end indices
+    const startIdx = allIds.indexOf(selectionStart);
+    const endIdx = allIds.indexOf(id);
+
+    if (startIdx !== -1 && endIdx !== -1) {
+      const minIdx = Math.min(startIdx, endIdx);
+      const maxIdx = Math.max(startIdx, endIdx);
+      const selectedRange = allIds.slice(minIdx, maxIdx + 1);
+      setSelectedIds(new Set(selectedRange));
+    }
+  }, [isSelecting, selectionStart, todos]);
+
+  const handleSelectionEnd = useCallback(() => {
+    setIsSelecting(false);
+  }, []);
+
+  const clearSelection = useCallback(() => {
+    setSelectedIds(new Set());
+  }, []);
+
+  const handleToggleSelected = useCallback((id) => {
+    if (selectedIds.has(id) && selectedIds.size > 1) {
+      // Find the clicked item to determine target state
+      const clickedItem = findTodoInTree(todos, id);
+      if (!clickedItem) return;
+
+      // Set all selected items to the opposite of the clicked item's current state
+      const targetState = !clickedItem.completed;
+
+      // Update all selected items to the target state
+      toggleMultiple(Array.from(selectedIds), targetState);
+    } else {
+      // Normal single toggle
+      toggleTodo(id);
+    }
+  }, [selectedIds, toggleTodo, toggleMultiple, todos]);
+
+  const findTodoInTree = (items, id) => {
+    for (const item of items) {
+      if (item.id === id) return item;
+      if (item.children && item.children.length > 0) {
+        const found = findTodoInTree(item.children, id);
+        if (found) return found;
+      }
+    }
+    return null;
+  };
+
   const totalTodos = countTodos(todos);
   const completedTodos = countCompletedTodos(todos);
 
   return (
     <DndProvider backend={HTML5Backend}>
-      <div className="min-h-screen bg-white">
+      <div
+        className="min-h-screen bg-white"
+        onClick={clearSelection}
+        onMouseUp={handleSelectionEnd}
+      >
         <div className="mx-auto max-w-4xl px-4 md:px-8 py-8 md:py-12">
           {/* Header */}
-          <div className="mb-6 md:mb-8">
+          <div className="mb-6 md:mb-8" onClick={(e) => e.stopPropagation()}>
             <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">Todo List</h1>
             <div className="flex items-center gap-2 md:gap-4 text-xs md:text-sm flex-wrap">
               <button
-                onClick={createNewList}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  createNewList();
+                }}
                 className="text-blue-600 hover:text-blue-700 font-medium"
               >
                 + New List
               </button>
               <button
-                onClick={() => setShowHelp(!showHelp)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowHelp(!showHelp);
+                }}
                 className="text-gray-500 hover:text-gray-700"
               >
                 Keyboard shortcuts
               </button>
               <button
-                onClick={exportToJson}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  exportToJson();
+                }}
                 className="text-gray-500 hover:text-gray-700"
               >
                 Export JSON
               </button>
               <button
-                onClick={() => fileInputRef.current?.click()}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  fileInputRef.current?.click();
+                }}
                 className="text-gray-500 hover:text-gray-700"
               >
                 Import JSON
@@ -103,13 +192,19 @@ function TodoList({ listId }) {
               {totalTodos > 0 && (
                 <>
                   <button
-                    onClick={checkAll}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      checkAll();
+                    }}
                     className="text-gray-500 hover:text-gray-700"
                   >
                     Check All
                   </button>
                   <button
-                    onClick={uncheckAll}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      uncheckAll();
+                    }}
                     className="text-gray-500 hover:text-gray-700"
                   >
                     Uncheck All
@@ -133,7 +228,7 @@ function TodoList({ listId }) {
 
           {/* Help Panel */}
           {showHelp && (
-            <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200 text-sm">
+            <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200 text-sm" onClick={(e) => e.stopPropagation()}>
               <h3 className="font-semibold mb-2 text-gray-900">Keyboard Shortcuts</h3>
               <div className="space-y-1 text-gray-600">
                 <div><kbd className="px-2 py-0.5 bg-white border border-gray-300 rounded text-xs">Enter</kbd> Create new item below</div>
@@ -147,7 +242,7 @@ function TodoList({ listId }) {
 
           {/* Progress Bar */}
           {totalTodos > 0 && (
-            <div className="mb-6">
+            <div className="mb-6" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center gap-3 text-sm text-gray-600 mb-2">
                 <span>{Math.round((completedTodos / totalTodos) * 100)}% complete</span>
               </div>
@@ -161,7 +256,7 @@ function TodoList({ listId }) {
           )}
 
           {/* Todo List */}
-          <div className="space-y-0.5">
+          <div className="space-y-0.5" onClick={(e) => e.stopPropagation()}>
             {todos.length === 0 ? (
               <div className="py-12 text-center">
                 <div className="text-gray-400 mb-4">
@@ -170,7 +265,9 @@ function TodoList({ listId }) {
                   </svg>
                 </div>
                 <button
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    clearSelection();
                     const newId = addTodo('');
                     setTimeout(() => handleFocus(newId), 10);
                   }}
@@ -185,7 +282,7 @@ function TodoList({ listId }) {
                   <TodoItem
                     key={todo.id}
                     todo={todo}
-                    onToggle={toggleTodo}
+                    onToggle={handleToggleSelected}
                     onUpdate={updateTodo}
                     onDelete={deleteTodo}
                     onAddAfter={addTodoAfter}
@@ -194,11 +291,18 @@ function TodoList({ listId }) {
                     onMove={moveTodo}
                     onFocus={handleFocus}
                     onRegisterRef={handleRegisterRef}
+                    onSelectionStart={handleSelectionStart}
+                    onSelectionMove={handleSelectionMove}
+                    isSelected={selectedIds.has(todo.id)}
+                    selectedIds={selectedIds}
+                    onClearSelection={clearSelection}
                   />
                 ))}
                 {/* Add new item at end */}
                 <button
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    clearSelection();
                     const newId = addTodo('');
                     setTimeout(() => handleFocus(newId), 10);
                   }}

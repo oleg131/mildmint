@@ -43,15 +43,16 @@ export const handler = async (event) => {
       // Update list
       const { todos } = JSON.parse(event.body);
 
-      let todoList = await TodoList.findOne({ listId });
-
-      if (!todoList) {
-        todoList = new TodoList({ listId, todos });
-      } else {
-        todoList.todos = todos;
-      }
-
-      await todoList.save();
+      // Use findOneAndUpdate with upsert to handle concurrent updates
+      const todoList = await TodoList.findOneAndUpdate(
+        { listId },
+        { listId, todos },
+        {
+          new: true,
+          upsert: true,
+          runValidators: true
+        }
+      );
 
       return {
         statusCode: 200,

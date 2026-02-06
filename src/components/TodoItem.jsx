@@ -16,6 +16,11 @@ export const TodoItem = ({
   onMove,
   onFocus,
   onRegisterRef,
+  onSelectionStart,
+  onSelectionMove,
+  isSelected,
+  selectedIds,
+  onClearSelection,
   level = 0
 }) => {
   const [text, setText] = useState(todo.text);
@@ -160,17 +165,56 @@ export const TodoItem = ({
   };
 
   return (
-    <div className={`${level > 0 ? 'ml-4 md:ml-6' : ''}`}>
+    <div className={`${level > 0 ? 'ml-4 md:ml-6' : ''}`} onClick={(e) => e.stopPropagation()}>
       <div
         ref={ref}
-        className={`group relative flex items-center gap-1 md:gap-2 py-1 px-1 md:px-2 rounded hover:bg-gray-50 transition-colors ${
+        className={`group relative flex items-center gap-1 md:gap-2 py-1 px-1 md:px-2 rounded transition-colors ${
           isDragging ? 'opacity-30' : ''
-        } ${getDropIndicatorClass()}`}
-        onMouseEnter={() => setIsHovered(true)}
+        } ${isSelected ? 'bg-blue-50 ring-2 ring-blue-300' : 'hover:bg-gray-50'} ${getDropIndicatorClass()}`}
+        onMouseEnter={() => {
+          setIsHovered(true);
+          if (onSelectionMove) {
+            onSelectionMove(todo.id);
+          }
+        }}
         onMouseLeave={() => setIsHovered(false)}
+        onClick={(e) => {
+          // If clicking on the item background and it's not selected, clear selection
+          if (e.target === e.currentTarget && !isSelected && selectedIds && selectedIds.size > 0) {
+            if (onClearSelection) {
+              onClearSelection();
+            }
+          }
+        }}
       >
+        {/* Selection Handle - Only visible on hover (desktop only) */}
+        <div
+          className={`hidden md:block flex-shrink-0 cursor-pointer text-gray-300 hover:text-blue-500 ${isHovered ? 'opacity-100' : 'opacity-0'} transition-opacity`}
+          onMouseDown={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (onSelectionStart) {
+              onSelectionStart(todo.id);
+            }
+          }}
+          onClick={(e) => {
+            e.stopPropagation();
+          }}
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="2" fill="currentColor" />
+            <circle cx="12" cy="6" r="2" fill="currentColor" />
+            <circle cx="12" cy="18" r="2" fill="currentColor" />
+          </svg>
+        </div>
+
         {/* Drag Handle - Only visible on hover (desktop only) */}
-        <div className={`hidden md:block flex-shrink-0 cursor-move text-gray-300 hover:text-gray-500 ${isHovered ? 'opacity-100' : 'opacity-0'} transition-opacity`}>
+        <div
+          className={`hidden md:block flex-shrink-0 cursor-move text-gray-300 hover:text-gray-500 ${isHovered ? 'opacity-100' : 'opacity-0'} transition-opacity`}
+          onClick={(e) => {
+            e.stopPropagation();
+          }}
+        >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
           </svg>
@@ -181,6 +225,9 @@ export const TodoItem = ({
           type="checkbox"
           checked={todo.completed}
           onChange={() => onToggle(todo.id)}
+          onClick={(e) => {
+            e.stopPropagation();
+          }}
           className="flex-shrink-0 w-4 h-4 md:w-4 md:h-4 text-blue-600 border-gray-300 rounded focus:ring-0 focus:ring-offset-0 cursor-pointer"
         />
 
@@ -193,6 +240,9 @@ export const TodoItem = ({
           onKeyDown={handleKeyDown}
           onFocus={handleFocus}
           onBlur={handleBlur}
+          onClick={(e) => {
+            e.stopPropagation();
+          }}
           placeholder="Type something..."
           className={`flex-1 min-w-0 bg-transparent border-none outline-none px-1 py-0.5 text-sm md:text-base ${
             todo.completed ? 'line-through text-gray-400' : 'text-gray-800'
@@ -205,6 +255,7 @@ export const TodoItem = ({
             <button
               onMouseDown={(e) => {
                 e.preventDefault(); // Prevent losing focus
+                e.stopPropagation();
                 handleOutdent();
               }}
               className="p-1.5 text-gray-600 hover:text-blue-600 bg-gray-100 hover:bg-blue-50 rounded active:bg-blue-100"
@@ -217,6 +268,7 @@ export const TodoItem = ({
             <button
               onMouseDown={(e) => {
                 e.preventDefault(); // Prevent losing focus
+                e.stopPropagation();
                 handleIndent();
               }}
               className="p-1.5 text-gray-600 hover:text-blue-600 bg-gray-100 hover:bg-blue-50 rounded active:bg-blue-100"
@@ -229,6 +281,7 @@ export const TodoItem = ({
             <button
               onMouseDown={(e) => {
                 e.preventDefault(); // Prevent losing focus
+                e.stopPropagation();
                 onDelete(todo.id);
               }}
               className="p-1.5 text-gray-600 hover:text-red-600 bg-gray-100 hover:bg-red-50 rounded active:bg-red-100"
@@ -244,7 +297,10 @@ export const TodoItem = ({
         {/* Action Buttons - Only visible on hover (desktop) */}
         <div className={`hidden md:flex gap-1 flex-shrink-0 ${isHovered ? 'opacity-100' : 'opacity-0'} transition-opacity`}>
           <button
-            onClick={() => onDelete(todo.id)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(todo.id);
+            }}
             className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"
             title="Delete (or Backspace on empty)"
           >
@@ -271,6 +327,11 @@ export const TodoItem = ({
               onMove={onMove}
               onFocus={onFocus}
               onRegisterRef={onRegisterRef}
+              onSelectionStart={onSelectionStart}
+              onSelectionMove={onSelectionMove}
+              isSelected={selectedIds && selectedIds.has(child.id)}
+              selectedIds={selectedIds}
+              onClearSelection={onClearSelection}
               level={level + 1}
             />
           ))}
