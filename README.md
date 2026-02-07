@@ -1,4 +1,4 @@
-# Nested Todo List App
+# Mildmint
 
 A Notion-style todo list application with seamless inline editing, keyboard shortcuts, unlimited nesting, and support for multiple lists.
 

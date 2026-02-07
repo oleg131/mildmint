@@ -1,6 +1,6 @@
 # Netlify Deployment Guide
 
-This guide will help you deploy your nested todo list app to Netlify with MongoDB Atlas backend.
+This guide will help you deploy Mildmint to Netlify with MongoDB Atlas backend.
 
 ## Prerequisites
 

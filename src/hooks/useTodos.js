@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
-const STORAGE_KEY = 'nested-todos-lists';
+const STORAGE_KEY = 'mildmint-lists';
 const API_BASE_URL = '/.netlify/functions';
 
 export const useTodos = (listId) => {
@@ -352,7 +352,7 @@ export const useTodos = (listId) => {
     const url = URL.createObjectURL(dataBlob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `todos-${new Date().toISOString().split('T')[0]}.json`;
+    link.download = `mildmint-${new Date().toISOString().split('T')[0]}.json`;
     link.click();
     URL.revokeObjectURL(url);
   };

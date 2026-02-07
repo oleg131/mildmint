@@ -151,7 +151,7 @@ function TodoList({ listId }) {
         <div className="mx-auto max-w-4xl px-4 md:px-8 py-8 md:py-12">
           {/* Header */}
           <div className="mb-6 md:mb-8" onClick={(e) => e.stopPropagation()}>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">Todo List</h1>
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">Mildmint</h1>
             <div className="flex items-center gap-2 md:gap-4 text-xs md:text-sm flex-wrap">
               <button
                 onClick={(e) => {

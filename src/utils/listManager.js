@@ -1,4 +1,4 @@
-const STORAGE_KEY = 'nested-todos-lists';
+const STORAGE_KEY = 'mildmint-lists';
 
 export const getAllLists = () => {
   try {
